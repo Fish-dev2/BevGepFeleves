@@ -86,7 +86,6 @@ pyreadline3==3.4.1
 python-dateutil==2.8.2
 python-slugify==8.0.4
 pytz==2024.1
-pywin32==306
 pyzmq==25.1.2
 referencing==0.33.0
 rembg==2.0.55
