@@ -1,8 +1,13 @@
 import streamlit as st
 import pandas as pd
 import pickle
+from sklearn.preprocessing import StandardScaler
 
 st.title("Hiring Probability Predictor")
+
+
+with open("scaler.pkl", "rb") as scaler_file:
+    scaler = pickle.load(scaler_file)
 
 col1, col2, col3 = st.columns(3)
 
@@ -14,9 +19,10 @@ with col1:
 
 with col2:
     st.subheader("Interview Data")
-    interview_score = st.number_input("Interview Score", min_value=0, max_value=100, value=50)
-    skill_score = st.number_input("Skill Score", min_value=0, max_value=100, value=50)
-    personality_score = st.number_input("Personality Score", min_value=0, max_value=100, value=50)
+    
+    interview_score = st.number_input("Interview Score (1-5)", min_value=1, max_value=5, value=3)
+    skill_score = st.number_input("Skill Score (1-5)", min_value=1, max_value=5, value=3)
+    personality_score = st.number_input("Personality Score (1-5)", min_value=1, max_value=5, value=3)
     recruitment_strategy = st.selectbox("Recruitment Strategy", [1, 2, 3], format_func=lambda x: "Aggressive" if x == 1 else ("Moderate" if x == 2 else "Conservative"))
 
 with col3:
@@ -24,6 +30,7 @@ with col3:
     education_level = st.selectbox("Education Level", [1, 2, 3], format_func=lambda x: "Bachelor's" if x == 1 else ("Master's" if x == 2 else "PhD"))
     experience_years = st.number_input("Years of Experience", min_value=0, max_value=50, value=1)
     previous_companies = st.number_input("Previous Companies", min_value=0, max_value=20, value=1)
+
 
 new_candidate = pd.DataFrame([{
     'Age': age,
@@ -38,6 +45,10 @@ new_candidate = pd.DataFrame([{
     'RecruitmentStrategy': recruitment_strategy
 }])
 
+
+new_candidate_scaled = scaler.transform(new_candidate)
+
+
 with open("rf_model.pkl", "rb") as model_file:
     model_rf = pickle.load(model_file)
 with open("logreg_model.pkl", "rb") as model_file:
@@ -45,20 +56,23 @@ with open("logreg_model.pkl", "rb") as model_file:
 with open("knn_model.pkl", "rb") as model_file:
     model_knn = pickle.load(model_file)
 
-prob_rf = model_rf.predict_proba(new_candidate)[:, 1][0] * 100
-prob_logreg = model_logreg.predict_proba(new_candidate)[:, 1][0] * 100
-prob_knn = model_knn.predict_proba(new_candidate)[:, 1][0] * 100
+
+prob_rf = model_rf.predict_proba(new_candidate_scaled)[:, 1][0] * 100
+prob_logreg = model_logreg.predict_proba(new_candidate_scaled)[:, 1][0] * 100
+prob_knn = model_knn.predict_proba(new_candidate_scaled)[:, 1][0] * 100
+
 
 results = {
     'Model': ['Random Forest', 'Logistic Regression', 'KNN'],
     'Result': [
-        f"Yes ({prob_rf:.2f}%)" if prob_rf >= 70 else f"No ({prob_rf:.2f}%)",
-        f"Yes ({prob_logreg:.2f}%)" if prob_logreg >= 70 else f"No ({prob_logreg:.2f}%)",
-        f"Yes ({prob_knn:.2f}%)" if prob_knn >= 70 else f"No ({prob_knn:.2f}%)"
+        f"Yes ({prob_rf:.2f}%)" if prob_rf >= 60 else f"No ({prob_rf:.2f}%)",
+        f"Yes ({prob_logreg:.2f}%)" if prob_logreg >= 60 else f"No ({prob_logreg:.2f}%)",
+        f"Yes ({prob_knn:.2f}%)" if prob_knn >= 60 else f"No ({prob_knn:.2f}%)"
     ]
 }
 
 df_results = pd.DataFrame(results)
+
 
 def colorize(val):
     color = 'green' if 'Yes' in val else 'red'
